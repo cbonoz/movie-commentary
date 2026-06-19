@@ -1,0 +1,24 @@
+[project]
+name = "movie-critiques"
+version = "0.1.0"
+description = "TikTok-style movie critique video generator"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.0",
+    "yt-dlp>=2024.0",
+    "mlx-whisper>=0.3.0",
+    "ddgs>=8.0",
+]
+
+[project.scripts]
+movie-critique = "movie_critiques.cli:cli"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+package = true
