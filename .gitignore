@@ -10,3 +10,5 @@ tmp/
 dist/
 build/
 .env
+commentary_data.json
+narration.json

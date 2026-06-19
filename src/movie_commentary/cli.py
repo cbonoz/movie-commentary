@@ -1,10 +1,11 @@
 import csv
+import json
 import sys
 from pathlib import Path
 
 import click
 
-from . import downloader, transcriber, segmenter, critic, compositor
+from . import downloader, transcriber, segmenter, critic, compositor, narrator
 
 SCENES_CSV = Path(__file__).resolve().parents[2] / "scenes.csv"
 WORK_BASE = Path(__file__).resolve().parents[2] / "work"
@@ -72,6 +73,8 @@ def make(scene, duration, output, force):
     clip_path = work_dir / "download.mp4"
     seg_path = work_dir / "segment.mp4"
     ass_path = work_dir / "commentary.ass"
+    cache_path = work_dir / "commentary_data.json"
+    narration_path = work_dir / "narration.json"
     if output is None:
         output = str(work_dir / "output.mp4")
 
@@ -134,17 +137,49 @@ def make(scene, duration, output, force):
     merged = segmenter.merge_segments(seg_segments)
     click.echo(f"    merged into {len(merged)} blocks")
 
-    click.echo("  Searching for commentary...")
-    enriched = critic.batch_commentary(movie, merged)
+    # Load or fetch commentary with caching
+    if cache_path.exists() and not force:
+        click.echo("  Loading cached commentary...")
+        with open(cache_path) as f:
+            enriched = json.load(f)
+    else:
+        click.echo("  Searching for commentary...")
+        enriched = critic.batch_commentary(movie, merged)
+        with open(cache_path, "w") as f:
+            json.dump(enriched, f, indent=2)
+        click.echo(f"    Cached to {cache_path}")
+
     commentary_found = sum(1 for e in enriched if e.get("commentary"))
-    click.echo(f"    {commentary_found} timed commentary items found:")
-    for e in enriched:
-        if e.get("commentary"):
-            ts = f"[{e['start']:.1f}s-{e['end']:.1f}s]"
-            click.echo(f"    {ts} {e['commentary']}")
+    raw_texts = [e["commentary"] for e in enriched if e.get("commentary")]
+    click.echo(f"    {commentary_found} raw commentary items")
+
+    movie_label = f"{movie} ({year})"
+
+    # Load or generate narration script
+    if narration_path.exists() and not force:
+        click.echo("  Loading cached narration...")
+        with open(narration_path) as f:
+            narration = json.load(f)
+    else:
+        rewritten = narrator.narrate(movie_label, scene_desc, key_line=key_line, themes=row.get("themes", ""), raw_items=raw_texts)
+        best_segs = critic.pick_best_segments(enriched, len(rewritten))
+        narration = []
+        click.echo(f"    Narrated into {len(rewritten)} lines:")
+        for seg, line in zip(best_segs, rewritten):
+            narration.append({"start": seg["start"], "end": seg["end"], "commentary": line})
+            ts = f"[{seg['start']:.1f}s-{seg['end']:.1f}s]"
+            click.echo(f"    {ts} {line}")
+        with open(narration_path, "w") as f:
+            json.dump(narration, f, indent=2)
+
+    # Apply narration to enriched segments
+    for n in narration:
+        for seg in enriched:
+            if seg.get("commentary") and abs(seg["start"] - n["start"]) < 1.0:
+                seg["commentary"] = n["commentary"]
+                break
 
     click.echo("  Generating overlay text...")
-    movie_label = f"{movie} ({year})"
     compositor.generate_ass(enriched, ass_path, duration=duration, movie_label=movie_label, scene_label=scene_desc)
 
     click.echo(f"  Composing final video → {output}...")
@@ -163,7 +198,7 @@ def status(scene):
     click.echo(f"Scene {scene}: {row['movie']} — {row['scene']}")
     click.echo(f"  CSV status: {row['status']}")
     click.echo(f"  Work dir: {work_dir}")
-    for fname in ["download.mp4", "segment.mp4", "commentary.ass", "output.mp4"]:
+    for fname in ["download.mp4", "segment.mp4", "commentary.ass", "commentary_data.json", "narration.json", "output.mp4"]:
         fp = work_dir / fname
         if fp.exists():
             size = fp.stat().st_size

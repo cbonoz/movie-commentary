@@ -1,17 +1,18 @@
 [project]
-name = "movie-critiques"
+name = "movie-commentary"
 version = "0.1.0"
-description = "TikTok-style movie critique video generator"
+description = "TikTok-style movie commentary video generator"
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.0",
     "yt-dlp>=2024.0",
     "mlx-whisper>=0.3.0",
     "ddgs>=8.0",
+    "openai>=2.43.0",
 ]
 
 [project.scripts]
-movie-critique = "movie_critiques.cli:cli"
+movie-commentary = "movie_commentary.cli:cli"
 
 [build-system]
 requires = ["setuptools>=75"]

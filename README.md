@@ -1,8 +1,14 @@
-# movie-critiques
+# movie-commentary
 
 > **WIP** — This is a work-in-progress. The commentary quality depends on raw web search results and needs refinement. Expect rough edges.
 
 Generate TikTok-style vertical videos (9:16) with movie scene clips and timed commentary overlays.
+
+## Screenshots
+
+| Intro card | Transcription in progress |
+|---|---|
+| ![title_screen](img/title_screen.png) | ![transcribing](img/transcribing.png) |
 
 ## How it works
 
@@ -27,13 +33,13 @@ uv sync
 
 ```bash
 # Run scene N from scenes.csv
-uv run movie-critique make --scene 1
+uv run movie-commentary make --scene 1
 
 # Run with specific duration and force rebuild
-uv run movie-critique make --scene 2 --duration 90 --force
+uv run movie-commentary make --scene 2 --duration 90 --force
 
 # Check cache status for a scene
-uv run movie-critique status --scene 1
+uv run movie-commentary status --scene 1
 ```
 
 ## Output

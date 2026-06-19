@@ -146,3 +146,9 @@ def batch_commentary(movie: str, segments: list[dict]) -> list[dict]:
 def pick_best(commentaries: list[str], n: int = 5) -> list[str]:
     scored = sorted(commentaries, key=_score, reverse=True)
     return scored[:n]
+
+
+def pick_best_segments(segments: list[dict], n: int = 5) -> list[dict]:
+    with_comm = [s for s in segments if s.get("commentary")]
+    scored = sorted(with_comm, key=lambda s: _score(s["commentary"]), reverse=True)
+    return scored[:n]
