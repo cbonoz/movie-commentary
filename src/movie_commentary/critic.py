@@ -110,9 +110,9 @@ def commentary_on_line(movie: str, line: str) -> str | None:
         return None
 
     queries = [
-        f'"{line}" "{movie}" behind the scenes trivia facts',
-        f'"{line}" "{movie}" scene analysis meaning',
-        f'"{movie}" "{line}" film trivia',
+        f'"{movie}" "{line}" scene analysis',
+        f'"{movie}" "{line}" behind the scenes',
+        f'"{movie}" "{line}" film critique',
     ]
 
     for query in queries:

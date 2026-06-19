@@ -158,26 +158,28 @@ def make(scene, duration, output, force):
     # Load or generate narration script
     if narration_path.exists() and not force:
         click.echo("  Loading cached narration...")
-        with open(narration_path) as f:
-            narration = json.load(f)
+        narrated_lines = json.load(narration_path.open())
     else:
-        rewritten = narrator.narrate(movie_label, scene_desc, key_line=key_line, themes=row.get("themes", ""), raw_items=raw_texts)
-        best_segs = critic.pick_best_segments(enriched, len(rewritten))
-        narration = []
-        click.echo(f"    Narrated into {len(rewritten)} lines:")
-        for seg, line in zip(best_segs, rewritten):
-            narration.append({"start": seg["start"], "end": seg["end"], "commentary": line})
-            ts = f"[{seg['start']:.1f}s-{seg['end']:.1f}s]"
-            click.echo(f"    {ts} {line}")
-        with open(narration_path, "w") as f:
-            json.dump(narration, f, indent=2)
+        narrated_lines = narrator.narrate(
+            movie_label, scene_desc,
+            key_line=key_line, themes=row.get("themes", ""),
+            raw_items=raw_texts,
+        )
+        click.echo(f"    Narrated into {len(narrated_lines)} lines:")
+        for i, line in enumerate(narrated_lines):
+            click.echo(f"    [{i+1}] {line}")
+        json.dump(narrated_lines, narration_path.open("w"), indent=2)
 
-    # Apply narration to enriched segments
-    for n in narration:
-        for seg in enriched:
-            if seg.get("commentary") and abs(seg["start"] - n["start"]) < 1.0:
-                seg["commentary"] = n["commentary"]
-                break
+    # Apply narration to top segments, clear the rest
+    best_segs = critic.pick_best_segments(enriched, len(narrated_lines))
+    narrated_segs = set(id(s) for s in best_segs)
+    for seg in enriched:
+        if id(seg) in narrated_segs:
+            continue
+        seg["commentary"] = None
+        seg.pop("commentary", None)
+    for seg, line in zip(best_segs, narrated_lines):
+        seg["commentary"] = line
 
     click.echo("  Generating overlay text...")
     compositor.generate_ass(enriched, ass_path, duration=duration, movie_label=movie_label, scene_label=scene_desc)

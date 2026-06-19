@@ -109,46 +109,31 @@ def generate_ass(
             f"{{\\pos({cx},{H - 50})}}{footer_text}"
         )
 
-    # ── collect commentary with original timing ──
-    raw = [s for s in segments if s.get("commentary")]
-    raw_uniq = []
-    seen_texts = set()
-    for s in raw:
-        sig = s["commentary"].lower()[:40]
-        if sig not in seen_texts:
-            seen_texts.add(sig)
-            raw_uniq.append(s)
-
-    best = critic.pick_best([s["commentary"] for s in raw_uniq], PHASE_COUNT)
-    best_set = set(best)
-
-    events = []
-    for s in raw_uniq:
-        if s["commentary"] not in best_set:
+    # ── collect commentary texts ──
+    texts = []
+    seen = set()
+    for s in segments:
+        t = (s.get("commentary") or "").strip()
+        if not t or len(t) < 15:
             continue
-        start = max(s["start"], intro_end_t + 0.5)
-        word_count = len(s["commentary"].split())
-        read_time = max(MIN_SECONDS, word_count / 3.3)
-        min_end = start + read_time
-        events.append({
-            "start": start,
-            "end": s["end"],
-            "min_end": min_end,
-            "text": s["commentary"],
-        })
+        sig = t.lower()[:40]
+        if sig in seen:
+            continue
+        seen.add(sig)
+        texts.append(t)
 
-    events.sort(key=lambda e: e["start"])
+    best = critic.pick_best(texts, PHASE_COUNT)
 
-    # ── timing: extend for readability, cap to avoid overlap ──
+    # ── continuous phased timing: space evenly, no gaps ──
     fade_s = FADE_CS / 100.0
-    for i, ev in enumerate(events):
-        adj = max(ev["end"], ev["min_end"])
-        if i < len(events) - 1:
-            adj = min(adj, events[i + 1]["start"] - fade_s)
-        else:
-            adj = min(adj, duration)
-        adj = max(adj, ev["start"] + fade_s + 0.5)
-        ev["end"] = adj
+    phase_dur = (duration - intro_end_t) / max(len(best), 1)
+    events = []
+    for i, text in enumerate(best):
+        start_t = intro_end_t + i * phase_dur
+        end_t = start_t + phase_dur
+        if i == len(best) - 1:
+            end_t = duration
+        events.append({"start": start_t, "end": end_t, "text": text})
 
     # ── write commentary events (centered, just below max video zone) ──
     comm_y = safe_zone + COMM_Y_OFFSET
