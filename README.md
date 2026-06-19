@@ -1,5 +1,7 @@
 # movie-critiques
 
+> **WIP** — This is a work-in-progress. The commentary quality depends on raw web search results and needs refinement. Expect rough edges.
+
 Generate TikTok-style vertical videos (9:16) with movie scene clips and timed commentary overlays.
 
 ## How it works
